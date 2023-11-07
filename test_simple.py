@@ -14,7 +14,7 @@ import numpy as np
 import PIL.Image as pil
 import matplotlib as mpl
 import matplotlib.cm as cm
-
+import shutil
 import torch
 from torchvision import transforms, datasets
 
@@ -71,15 +71,19 @@ def test_simple(args):
     print("   Loading pretrained encoder")
     encoder = networks.ResnetEncoder(18, False)
     loaded_dict_enc = torch.load(encoder_path, map_location=device)
+    import pdb; pdb.set_trace()
 
     # extract the height and width of image that this model was trained with
     feed_height = loaded_dict_enc['height']
     feed_width = loaded_dict_enc['width']
+    import pdb; pdb.set_trace()
+
     filtered_dict_enc = {k: v for k, v in loaded_dict_enc.items() if k in encoder.state_dict()}
     encoder.load_state_dict(filtered_dict_enc)
     encoder.to(device)
     encoder.eval()
-
+    import pdb; pdb.set_trace()
+   
     print("   Loading pretrained decoder")
     depth_decoder = networks.DepthDecoder(
         num_ch_enc=encoder.num_ch_enc, scales=range(4))
@@ -89,6 +93,7 @@ def test_simple(args):
 
     depth_decoder.to(device)
     depth_decoder.eval()
+    import pdb; pdb.set_trace()
 
     # FINDING INPUT IMAGES
     if os.path.isfile(args.image_path):
@@ -117,32 +122,44 @@ def test_simple(args):
             original_width, original_height = input_image.size
             input_image = input_image.resize((feed_width, feed_height), pil.LANCZOS)
             input_image = transforms.ToTensor()(input_image).unsqueeze(0)
+            import pdb; pdb.set_trace()
 
             # PREDICTION
             input_image = input_image.to(device)
+            import pdb; pdb.set_trace()
             features = encoder(input_image)
+            import pdb; pdb.set_trace()
             outputs = depth_decoder(features)
+            import pdb; pdb.set_trace()
 
             disp = outputs[("disp", 0)]
             disp_resized = torch.nn.functional.interpolate(
                 disp, (original_height, original_width), mode="bilinear", align_corners=False)
-
+            import pdb; pdb.set_trace()
+            
             # Saving numpy file
             output_name = os.path.splitext(os.path.basename(image_path))[0]
-            name_dest_npy = os.path.join(output_directory, "{}_disp.npy".format(output_name))
+            name_dest_npy = os.path.join('./result', "{}_disp.npy".format(output_name))
             scaled_disp, _ = disp_to_depth(disp, 0.1, 100)
+            import pdb; pdb.set_trace()
             np.save(name_dest_npy, scaled_disp.cpu().numpy())
 
             # Saving colormapped depth image
             disp_resized_np = disp_resized.squeeze().cpu().numpy()
+            import pdb; pdb.set_trace()
             vmax = np.percentile(disp_resized_np, 95)
+            import pdb; pdb.set_trace()
             normalizer = mpl.colors.Normalize(vmin=disp_resized_np.min(), vmax=vmax)
+            import pdb; pdb.set_trace()
             mapper = cm.ScalarMappable(norm=normalizer, cmap='magma')
+            import pdb; pdb.set_trace()
             colormapped_im = (mapper.to_rgba(disp_resized_np)[:, :, :3] * 255).astype(np.uint8)
+            import pdb; pdb.set_trace()
             im = pil.fromarray(colormapped_im)
-
-            name_dest_im = os.path.join(output_directory, "{}_disp.jpeg".format(output_name))
+            import pdb; pdb.set_trace()
+            name_dest_im = os.path.join('./result', "{}_disp.jpeg".format(output_name))
             im.save(name_dest_im)
+            shutil.copy(image_path, './result')
 
             print("   Processed {:d} of {:d} images - saved prediction to {}".format(
                 idx + 1, len(paths), name_dest_im))

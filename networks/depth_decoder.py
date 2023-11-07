@@ -25,6 +25,7 @@ class DepthDecoder(nn.Module):
 
         self.num_ch_enc = num_ch_enc
         self.num_ch_dec = np.array([16, 32, 64, 128, 256])
+        # self.num_ch_dec = np.array([29, 57, 113, 225, 450])
 
         # decoder
         self.convs = OrderedDict()
@@ -33,7 +34,6 @@ class DepthDecoder(nn.Module):
             num_ch_in = self.num_ch_enc[-1] if i == 4 else self.num_ch_dec[i + 1]
             num_ch_out = self.num_ch_dec[i]
             self.convs[("upconv", i, 0)] = ConvBlock(num_ch_in, num_ch_out)
-
             # upconv_1
             num_ch_in = self.num_ch_dec[i]
             if self.use_skips and i > 0:
@@ -57,6 +57,7 @@ class DepthDecoder(nn.Module):
             x = [upsample(x)]
             if self.use_skips and i > 0:
                 x += [input_features[i - 1]]
+            # import pdb; pdb.set_trace()
             x = torch.cat(x, 1)
             x = self.convs[("upconv", i, 1)](x)
             if i in self.scales:
